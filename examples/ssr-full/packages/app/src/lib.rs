@@ -1,4 +1,6 @@
-use futures_signals::signal::Mutable;
+use std::time::Duration;
+
+use futures_signals::signal::{Mutable, SignalExt};
 use silkenweb::{
     document::DocumentHead,
     dom::Dom,
@@ -7,11 +9,11 @@ use silkenweb::{
         ElementEvents,
     },
     hydration::{hydrate, hydrate_in_head},
-    node::element::ParentElement,
+    node::element::{ParentElement, Element},
     prelude::{html::title, HtmlElement},
     router,
-    task::spawn_local,
-    value::Sig,
+    task::{spawn_local, self},
+    value::Sig, time::sleep,
 };
 
 pub fn hydrate_app() {
@@ -54,7 +56,31 @@ pub fn app<D: Dom>() -> (DocumentHead<D>, Div<D>) {
                     path => path,
                 }
             )
-        }))));
+        }))))
+        .child(my_foo())
+        ;
 
     (head, body)
+}
+
+fn my_foo<D: Dom>() -> Div<D> {
+    // TODO: Learn MutableVec.  https://silkenweb.netlify.app/book/reactivity
+    let children: Mutable<Option<()>> = Mutable::new(None);
+
+    let children_sig = children.signal();
+
+    task::spawn_local(async move {
+        dbg!("Waiting");
+        sleep(Duration::from_secs(1)).await;
+        dbg!("Done");
+        children.set(Some(()));
+    });
+
+    
+    let rendered = children_sig.map(|val| match val {
+        Some(_) => div().text("Got child"),
+        None => div().text("No child"),
+    });
+    
+    div().class("my-foo").child(Sig(rendered))
 }

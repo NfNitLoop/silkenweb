@@ -43,7 +43,10 @@ async fn render(uri: Uri) -> impl IntoResponse {
     let (head, body) = app::<Dry>();
     Dry::mount_in_head("head", head);
     router::set_url_path(uri.path());
+    dbg!("before render_now");
     task::render_now().await;
+    task::render_now().await;
+    dbg!("after render_now");
 
     let page_html = format!(
         include_str!("../../app/page.tmpl.html"),
